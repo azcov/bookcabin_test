@@ -1,6 +1,7 @@
 package garudaindonesia
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/azcov/bookcabin_test/internal/domain"
@@ -64,8 +65,9 @@ func (f *FlightInfo) ToDomainFlightInfo() (domain.FlightInfo, error) {
 
 	formattedDuration := util.FormatDurationMinute(f.DurationMinutes)
 
-	ac := accounting.Accounting{Symbol: f.Price.Currency, Precision: 0}
+	ac := accounting.Accounting{Symbol: f.Price.Currency, Precision: 0, Format: "%s %v", Thousand: ".", Decimal: ","}
 	formattedPrice := ac.FormatMoney(f.Price.Amount)
+
 	result := domain.FlightInfo{
 		ID:       f.FlightID + "_" + f.Airline,
 		Provider: f.Airline,
@@ -104,11 +106,17 @@ func (f *FlightInfo) ToDomainFlightInfo() (domain.FlightInfo, error) {
 		},
 		Amenities: []domain.AmenityInfo{},
 		Baggage: domain.BaggageInfo{
-			CarryOn: "Cabin baggage only",
-			Checked: "Additional fee",
+			CarryOn: fmt.Sprintf("%dkg cabin", f.Baggage.CarryOn),
+			Checked: fmt.Sprintf("%dkg checked", f.Baggage.Checked),
 		},
 	}
-
+	for _, amenity := range f.Amenities {
+		result.Amenities = append(result.Amenities, domain.AmenityInfo{
+			Type:        amenity,
+			Description: amenity,
+		})
+	}
+	result.CalculateBestValueScore()
 	return result, nil
 }
 

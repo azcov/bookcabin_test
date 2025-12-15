@@ -1,6 +1,7 @@
 package airasia
 
 import (
+	"strings"
 	"time"
 
 	"github.com/azcov/bookcabin_test/internal/consts"
@@ -40,8 +41,11 @@ func (f *FlightInfo) ToDomainFlightInfo() (domain.FlightInfo, error) {
 
 	totalMinutes := int(f.DurationHours * 60)
 	formattedDuration := util.FormatDurationMinute(totalMinutes)
-	ac := accounting.Accounting{Symbol: "IDR", Precision: 0}
+	ac := accounting.Accounting{Symbol: "IDR", Precision: 0, Format: "%s %v", Thousand: ".", Decimal: ","}
 	formattedPrice := ac.FormatMoney(f.PriceIdr)
+
+	baggageInfo := strings.Split(f.BaggageNote, ",")
+
 	result := domain.FlightInfo{
 		ID:       f.FlightCode + "_" + f.Airline,
 		Provider: f.Airline,
@@ -76,12 +80,19 @@ func (f *FlightInfo) ToDomainFlightInfo() (domain.FlightInfo, error) {
 		CabinClass:     f.CabinClass,
 		Aircraft:       nil,
 		Amenities:      []domain.AmenityInfo{},
-		Baggage: domain.BaggageInfo{
-			CarryOn: "Cabin baggage only",
-			Checked: "Additional fee",
-		},
+		// Baggage: domain.BaggageInfo{
+		// 	CarryOn: "Cabin baggage only",
+		// 	Checked: "Additional fee",
+		// },
 	}
 
+	if len(baggageInfo) >= 2 {
+		result.Baggage = domain.BaggageInfo{
+			CarryOn: baggageInfo[0],
+			Checked: baggageInfo[1],
+		}
+	}
+	result.CalculateBestValueScore()
 	return result, nil
 }
 

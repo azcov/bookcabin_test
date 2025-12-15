@@ -103,7 +103,7 @@ func (f *FlightInfo) ToDomainFlightInfo() (domain.FlightInfo, error) {
 	// Format duration
 	formattedDuration := util.FormatDurationMinute(f.FlightTime)
 
-	ac := accounting.Accounting{Symbol: f.Pricing.Currency, Precision: 0}
+	ac := accounting.Accounting{Symbol: f.Pricing.Currency, Precision: 0, Format: "%s %v", Thousand: ".", Decimal: ","}
 	formattedPrice := ac.FormatMoney(f.Pricing.Total)
 
 	result := domain.FlightInfo{
@@ -172,7 +172,7 @@ func (f *FlightInfo) ToDomainFlightInfo() (domain.FlightInfo, error) {
 			Description: "Meal Included",
 		})
 	}
-
+	result.CalculateBestValueScore()
 	return result, nil
 }
 

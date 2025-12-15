@@ -55,11 +55,11 @@ type FlightInfo struct {
 	Aircraft       *AircraftInfo `json:"aircraft"`
 	Amenities      []AmenityInfo `json:"amenities"`
 	Baggage        BaggageInfo   `json:"baggage"`
-	BestValueScore int           `json:"best_value_score"`
+	BestValueScore float64       `json:"best_value_score"`
 	// Internal fields not exposed in API
 	TotalTripDuration int64 `json:"-"`
 }
 
 func (f *FlightInfo) CalculateBestValueScore() {
-	f.BestValueScore = f.Price.Amount * f.Duration.TotalMinutes
+	f.BestValueScore = float64(f.Price.Amount) / float64(f.Duration.TotalMinutes)
 }

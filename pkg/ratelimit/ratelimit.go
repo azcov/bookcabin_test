@@ -1,9 +1,10 @@
 package ratelimit
 
 import (
+	"context"
 	"time"
 
-	"go.uber.org/ratelimit"
+	"golang.org/x/time/rate"
 )
 
 // Limiter abstracts the rate limiting functionality
@@ -12,23 +13,42 @@ type Limiter interface {
 }
 
 type RateLimiter struct {
-	limiter ratelimit.Limiter
+	limiter *rate.Limiter
 }
 
 // New creates a new rate limiter that allows `rate` events per second.
-func New(rate int) Limiter {
-	return &RateLimiter{limiter: ratelimit.New(rate)}
+func New(ratePerSecond int) Limiter {
+	return &RateLimiter{
+		limiter: rate.NewLimiter(
+			rate.Limit(ratePerSecond),
+			ratePerSecond, // burst = rate
+		),
+	}
 }
 
-func NewWithDuration(rate int, duration time.Duration) Limiter {
-	return &RateLimiter{limiter: ratelimit.New(rate, ratelimit.Per(duration))}
+// NewWithDuration allows `rate` events per `duration`
+func NewWithDuration(rateCount int, duration time.Duration) Limiter {
+	r := rate.Every(duration / time.Duration(rateCount))
+
+	return &RateLimiter{
+		limiter: rate.NewLimiter(
+			r,
+			rateCount, // burst
+		),
+	}
 }
 
+// NewUnlimited returns a limiter that never blocks
 func NewUnlimited() Limiter {
-	return &RateLimiter{limiter: ratelimit.NewUnlimited()}
+	return &RateLimiter{
+		limiter: rate.NewLimiter(rate.Inf, 0),
+	}
 }
 
 func (rl *RateLimiter) Allow() bool {
-	t := rl.limiter.Take()
-	return time.Now().Before(t)
+	return rl.limiter.Allow()
+}
+
+func (rl *RateLimiter) Wait(ctx context.Context) error {
+	return rl.limiter.Wait(ctx)
 }

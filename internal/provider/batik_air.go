@@ -27,7 +27,7 @@ func NewBatikAirProvider(fileDir string) AirlineInterface {
 	}
 }
 
-func (ap *batikAirProvider) SearchFlights(ctx context.Context, input domain.SearchRequest) ([]domain.FlightInfo, error) {
+func (ap *batikAirProvider) SearchFlights(ctx context.Context, input domain.SearchRequest) (flights []domain.FlightInfo, err error) {
 	if !ap.rl.Allow() {
 		return nil, errors.ErrBatikAirRateLimitExceeded
 	}
@@ -39,10 +39,17 @@ func (ap *batikAirProvider) SearchFlights(ctx context.Context, input domain.Sear
 	defer func() {
 		elapsed := time.Since(start)
 		delay := util.RandomDuration(minDelay, maxDelay)
-		time.Sleep(delay - elapsed)
+		wait := delay - elapsed
+		if wait > 0 {
+			select {
+			case <-time.After(wait):
+			case <-ctx.Done():
+				err = ctx.Err()
+			}
+		}
 	}()
 
-	flights, err := ap.callSearch(ctx, input)
+	flights, err = ap.callSearch(ctx, input)
 	if err != nil {
 		logger.ErrorContext(ctx, "Error : ", "err", err)
 		return nil, err

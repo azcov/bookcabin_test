@@ -1,6 +1,7 @@
 package batikair
 
 import (
+	"strings"
 	"time"
 
 	"github.com/azcov/bookcabin_test/internal/consts"
@@ -71,8 +72,9 @@ func (f *FlightInfo) ToDomainFlightInfo() (domain.FlightInfo, error) {
 	// formattedDuration := util.FormatDurationMinute(totalMinutes)
 
 	totalMinutes := arriveTime.Sub(departTime).Minutes()
-	ac := accounting.Accounting{Symbol: f.Fare.CurrencyCode, Precision: 0}
+	ac := accounting.Accounting{Symbol: f.Fare.CurrencyCode, Precision: 0, Format: "%s %v", Thousand: ".", Decimal: ","}
 	formattedPrice := ac.FormatMoney(f.Fare.TotalPrice)
+	baggageInfo := strings.Split(f.BaggageInfo, ",")
 
 	result := domain.FlightInfo{
 		ID:       f.FlightNumber + "_" + f.AirlineName,
@@ -111,12 +113,25 @@ func (f *FlightInfo) ToDomainFlightInfo() (domain.FlightInfo, error) {
 			Code:  "",
 		},
 		Amenities: []domain.AmenityInfo{},
-		Baggage: domain.BaggageInfo{
-			CarryOn: "Cabin baggage only",
-			Checked: "Additional fee",
-		},
+		// Baggage: domain.BaggageInfo{
+		// 	CarryOn: "Cabin baggage only",
+		// 	Checked: "Additional fee",
+		// },
 	}
 
+	if len(baggageInfo) >= 2 {
+		result.Baggage = domain.BaggageInfo{
+			CarryOn: baggageInfo[0],
+			Checked: baggageInfo[1],
+		}
+	}
+	for _, amenity := range f.OnboardServices {
+		result.Amenities = append(result.Amenities, domain.AmenityInfo{
+			Type:        amenity,
+			Description: amenity,
+		})
+	}
+	result.CalculateBestValueScore()
 	return result, nil
 }
 

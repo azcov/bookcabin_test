@@ -22,8 +22,8 @@ func NewGoCache(cfg CacheConfig) Cache {
 	if cfg.CleanupIntervalMinute <= 0 {
 		cfg.CleanupIntervalMinute = DEFAULT_CLEANUP_INTERVAL
 	}
-	defaultExp := time.Duration(cfg.ExpirationMinute) * time.Millisecond
-	cleanupInt := time.Duration(cfg.CleanupIntervalMinute) * time.Millisecond
+	defaultExp := time.Duration(cfg.ExpirationMinute) * time.Minute
+	cleanupInt := time.Duration(cfg.CleanupIntervalMinute) * time.Minute
 
 	c := go_cache.New(defaultExp, cleanupInt)
 	return &goCache{

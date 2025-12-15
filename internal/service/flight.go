@@ -35,7 +35,8 @@ func (fs *flightService) SerchFlight(ctx context.Context, input *domain.SearchRe
 
 	// 1. Check Cache
 	cacheKey := input.ToCacheKey()
-	if cachedData, err := fs.cache.Get(cacheKey); err == nil {
+	cachedData, err := fs.cache.Get(cacheKey)
+	if err == nil {
 		data := cachedData.(domain.SearchResponse)
 		data.Metadata.CacheHit = true
 		data.Metadata.SearchTimeMs = int(time.Since(start).Milliseconds())
@@ -48,7 +49,6 @@ func (fs *flightService) SerchFlight(ctx context.Context, input *domain.SearchRe
 		logger.ErrorContext(ctx, "Error : ", "err", err)
 		return nil, err
 	}
-	// logger.InfoContext(ctx, "Aggregated Flights: ", "count", len(result.Flights), "data", result.Flights)
 
 	// 3. Filter Results
 	result.Flights = fs.filterFlights(result.Flights, input.Filters)
@@ -66,7 +66,10 @@ func (fs *flightService) SerchFlight(ctx context.Context, input *domain.SearchRe
 	result.Metadata.CacheHit = false
 
 	// 6. Save to Cache
-	fs.cache.Set(cacheKey, result)
+	err = fs.cache.SetWithExpiration(cacheKey, *result, time.Second)
+	if err != nil {
+		logger.ErrorContext(ctx, "Error saving to cache", "err", err)
+	}
 
 	return result, nil
 }
@@ -75,7 +78,7 @@ func (fs *flightService) SerchFlight(ctx context.Context, input *domain.SearchRe
 
 func (fs *flightService) filterFlights(flights []domain.FlightInfo, filters []domain.SearchFilter) []domain.FlightInfo {
 	if len(filters) == 0 {
-		return []domain.FlightInfo{}
+		return flights
 	}
 
 	filtered := make([]domain.FlightInfo, 0, len(flights))

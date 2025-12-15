@@ -27,7 +27,7 @@ func NewAirAsiaProvider(fileDir string) AirlineInterface {
 	}
 }
 
-func (ap *airAsiaProvider) SearchFlights(ctx context.Context, input domain.SearchRequest) ([]domain.FlightInfo, error) {
+func (ap *airAsiaProvider) SearchFlights(ctx context.Context, input domain.SearchRequest) (flights []domain.FlightInfo, err error) {
 	if !ap.rl.Allow() {
 		return nil, errors.ErrAirAsiaRateLimitExceeded
 	}
@@ -42,14 +42,21 @@ func (ap *airAsiaProvider) SearchFlights(ctx context.Context, input domain.Searc
 		// Simulate delay: 50–150ms
 
 		delay := util.RandomDuration(minDelay, maxDelay)
-		time.Sleep(delay - elapsed)
+		wait := delay - elapsed
+		if wait > 0 {
+			select {
+			case <-time.After(wait):
+			case <-ctx.Done():
+				err = ctx.Err()
+			}
+		}
 	}()
 
 	// Simulate failure: 10% fail rate
 	if util.RandomFailure(failRate) {
 		return nil, errors.ErrAirAsiaInternalError
 	}
-	flights, err := ap.callSearch(ctx, input)
+	flights, err = ap.callSearch(ctx, input)
 	if err != nil {
 		logger.ErrorContext(ctx, "Error : ", "err", err)
 		return nil, err

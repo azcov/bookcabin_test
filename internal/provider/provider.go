@@ -3,8 +3,10 @@ package provider
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/azcov/bookcabin_test/internal/domain"
+	"github.com/azcov/bookcabin_test/pkg/logger"
 )
 
 type AirlineProvider struct {
@@ -29,9 +31,16 @@ func NewAirlineProvider() *AirlineProvider {
 
 func (ap *AirlineProvider) SearchFlights(ctx context.Context, input domain.SearchRequest) (*domain.SearchResponse, error) {
 	// Implementation for searching flights from this specific airline provider
+	MAX_RETRY := 3
+	TIMEOUT := 2 * time.Second
+
+	ctx, cancel := context.WithTimeout(ctx, TIMEOUT)
+	defer cancel()
+
 	type result struct {
-		flights []domain.FlightInfo
-		err     error
+		provider string
+		flights  []domain.FlightInfo
+		err      error
 	}
 
 	providers := []struct {
@@ -56,16 +65,29 @@ func (ap *AirlineProvider) SearchFlights(ctx context.Context, input domain.Searc
 	wg.Add(len(providers))
 
 	ch := make(chan result, len(providers))
-
 	for idx, p := range providers {
 		// capture range variable
 		provider := p
 
 		go func(i int) {
 			defer wg.Done()
-			// logger.InfoContext(ctx, "Provider: ", "name", provider.name, "index", i)
-			flights, err := provider.fn()
-			ch <- result{flights: flights, err: err}
+
+			var (
+				flights []domain.FlightInfo
+				err     error
+			)
+			for range MAX_RETRY {
+				if ctx.Err() != nil {
+					err = ctx.Err()
+					break
+				}
+				flights, err = provider.fn()
+				// retry if error
+				if err == nil {
+					break
+				}
+			}
+			ch <- result{provider: provider.name, flights: flights, err: err}
 		}(idx)
 	}
 
@@ -80,13 +102,17 @@ func (ap *AirlineProvider) SearchFlights(ctx context.Context, input domain.Searc
 		// logger.InfoContext(ctx, "Provider Result: ", "flights", res.flights, "err", res.err)
 		resp.Metadata.ProvidersQueried++
 		if res.err != nil {
+			logger.ErrorContext(ctx, "Provider failed", "err", res.err)
 			resp.Metadata.ProvidersFailed++
 			continue
 		}
+		logger.InfoContext(ctx, "Provider succeeded", "provider", res.provider, "len_flights", len(res.flights))
 		resp.Metadata.TotalResults += len(res.flights)
 		resp.Flights = append(resp.Flights, res.flights...)
 		resp.Metadata.ProvidersSucceeded++
 	}
+
+	logger.InfoContext(ctx, "Total results", "total", len(resp.Flights))
 
 	return resp, nil
 }
