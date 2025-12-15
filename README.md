@@ -46,12 +46,12 @@ The project follows a **Clean / Layered Architecture** to separate concerns and 
     *   `AirlineAggregator`: Wraps the complexity of multiple providers, making the service layer easier to test by mocking the aggregator.
 *   **Caching Strategy**: Search results are cached based on a composite key of the search parameters (Origin, Destination, Date, etc.). This allows identical queries to return instantly, reducing load on providers. 
     *   *Note*: In a real-world distributed system, Redis would be preferred over in-memory cache.
-*   **Smart Sorting/Ranking**: A "Best Value" score is calculated combining Price and Duration to give users the optimal trade-off, alongside standard sorting by Price, Duration, Departure, and Arrival time.
+*   **Smart Sorting/Ranking**: A "Best Value" score is calculated combining Price and Duration to give users the optimal trade-off.
 *   **Mocking**: The provider layer currently loads data from local JSON files to simulate external API calls, with random delays added to mimic network latency.
 
 ## Prerequisites
 
-*   **Go**: Version 1.23 or later installed.
+*   **Go**: Version 1.25 or later installed.
 *   **Make**: (Optional) for running Makefile commands.
 
 ## Installation & Setup

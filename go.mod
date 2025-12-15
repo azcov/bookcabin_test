@@ -10,12 +10,10 @@ require (
 	github.com/leekchan/accounting v1.0.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/stretchr/testify v1.11.1
-	go.uber.org/ratelimit v0.3.1
 	go.uber.org/zap v1.27.1
 )
 
 require (
-	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/bytedance/sonic v1.14.0 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
